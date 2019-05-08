@@ -22,6 +22,7 @@ YELLOW = (0xF7, 0xCA, 0x18)
 def pos_to_node(pos, graph):
     x, y = pos
     
+    print()
     row = math.ceil(y/N_PIXEL) - 1
     col = math.ceil(x/N_PIXEL) - 1
 
@@ -111,7 +112,7 @@ class Graph():
                     top.neighbors.append(node)
 
         # set start and endnode
-        self.get_node(int(self.rows/2),1).state = Node.START
+        self.get_node(int(self.rows/2),int(self.cols/2)).state = Node.START
         self.get_node(int(self.rows/2+1),self.cols-2).state = Node.END
 
     def get_node(self, row, col):
