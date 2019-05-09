@@ -8,57 +8,42 @@ import math
 from random import randint
 from json import dumps
 
-from flask import Flask, copy_current_request_context, request
+from flask import Flask, copy_current_request_context, request, jsonify
 from flask_socketio import SocketIO, emit, send
 from threading import Thread
 
 from planning import Floorplan
+from planning.position import emitter_thread
 
 app = Flask(__name__, static_folder='map-server/static')
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode="threading")
 
-def emitter_thread():
-    phi = 0
-    while True:
+floorplan = Floorplan("CAD Files/li27_example.dxf")
 
-        if phi >= 360:
-            phi = 0
-        else:
-            phi += 3
-
-        x = 100*math.cos(phi/360*2*math.pi) + 300
-        y = 100*math.sin(phi/360*2*math.pi) + 300
-
-
-        #x = randint(100, 600)
-        #y = randint(100, 400)
-
-        print(x,y)
-
-        position = {
-            "pos": {"x": x, "y": y}
-        }
-
-        socketio.emit("json", dumps(position), namespace='/position')  # send to all clients in the namespace
-
-        time.sleep(0.1)
+clients = []
+t1 = Thread(target=emitter_thread, args=(socketio,))
 
 @app.route('/')
 def index():
     return app.send_static_file('index.html')
 
+@app.route('/floorplan')
+def get_floorplan():
+    data = list(floorplan.get_obstacles())
+
+    return jsonify(data)
+
 @socketio.on('connect', namespace='/position')
 def test_connect():
+    clients.append(request.sid)
     print("New client connected")
 
 @socketio.on('disconnect', namespace='/position')
 def handle_disconnect():
+    clients.remove(request.sid)
     print('Client disconnected')
 
 if __name__ == '__main__':
-    t1 = Thread(target=emitter_thread)
-    #t1 = socketio.start_background_task(emitter_thread)
-    print("bla")
     t1.start()
     socketio.run(app, log_output=False)

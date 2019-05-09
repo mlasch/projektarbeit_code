@@ -35,16 +35,16 @@ class Map(object):
 def main():
     from pprint import pprint
     pygame.init()
-    pygame.mixer.quit() #workaround for https://github.com/pygame/pygame/issues/331  
-    
-    floor = Floorplan('CAD Files/polygon_convex_example.dxf')
+    pygame.mixer.quit() #workaround for https://github.com/pygame/pygame/issues/331
 
+    floor = Floorplan('CAD Files/polygon_convex_example.dxf')
+    #floor = Floorplan('CAD Files/li27_example.dxf')
     #xmin, xmax, ymin, ymax = floor.get_boundary()
-    
+
     width = 1000
     width, height = floor.set_width(width)
 
-    screen = pygame.display.set_mode((math.ceil(width), math.ceil(height))) 
+    screen = pygame.display.set_mode((math.ceil(width), math.ceil(height)))
 
     pygame.display.set_caption("Path Planning Polygon Demo")
     clock = pygame.time.Clock()
@@ -57,7 +57,7 @@ def main():
     for i in floor.generate_graph(screen):
         pass
 
-    while running: 
+    while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -71,18 +71,18 @@ def main():
                         print("no intersection")
                 except StopIteration:
                     pass
-    
+
         screen.fill(GREY)
-        
+
         #pygame.draw.circle(screen, GREEN, map_.current_pos, 10)
         #pygame.draw.circle(screen, RED, map_.dest_pos, 10)
-        
+
         for polygon in floor.polygons:
             pygame.draw.polygon(screen, DARKGREY, list(map(lambda x: floor.scale_xy(*x), polygon.vertexes)))
 
         for graph_line in floor.graph:
             pygame.draw.line(screen, YELLOW, floor.scale_xy(*graph_line.start), floor.scale_xy(*graph_line.end))
-            
+
         if edge:
             if intersect:
                 color = RED
@@ -102,5 +102,3 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     main()
-
-

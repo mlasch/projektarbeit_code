@@ -21,7 +21,7 @@ def check_junction(p1, p2, p3, p4):
     a2 = y4 - y3
     b2 = x3 - x4
     c2 = a2 * x3 + b2 * y3
-    
+
     den = a1*b2-a2*b1
 
     if den == 0:
@@ -30,7 +30,7 @@ def check_junction(p1, p2, p3, p4):
 
     x = (b2*c1 - b1*c2)/ den
     y = (a1*c2 - a2*c1)/ den
-  
+
     # dirty division by zero hack
     if (x2 - x1) == 0:
         rx0 = (x - x1) / (x2 - x1+0.001)
@@ -77,7 +77,7 @@ class Edge(object):
         print("|-->Check: ",self, other)
 
         return result
-    
+
     def __str__(self):
         return "<Edge {:1.1f},{:1.1f}-->{:1.1f},{:1.1f}>".format(self.start[0], self.start[1], self.end[0], self.end[1])
 
@@ -98,12 +98,12 @@ class Polygon(object):
 
     #def check_intersect(self, line):
     #    for edge in self.edges:
-    #        
+    #
     #        print("=======================")
     #        print("start", edge.start, edge.end)
 
     #        print("end", line.start, edge.end)
-    #        
+    #
     #        print("=======================")
     #        if edge.check_intersect(line):
     #            return True
@@ -118,7 +118,7 @@ class Floorplan(object):
 
         self.graph = []
         dwg = ezdxf.readfile(dxf_path)
-        
+
         msp = dwg.modelspace()
         for polyline in msp.query('LWPOLYLINE'):
             polygon = Polygon()
@@ -130,7 +130,7 @@ class Floorplan(object):
             last_point = None
             for point in polyline:
                 x, y, start_width, end_width, bulge = point
-               
+
                 #print(x,y)
                 polygon.add_vertex((x,y))
 
@@ -139,8 +139,15 @@ class Floorplan(object):
                     polygon.add_edge(edge)
 
                 last_point = (x,y)
-                    
+
             self.polygons.append(polygon)
+
+    def get_obstacles(self):
+        for polygon in self.polygons:
+            yield polygon.vertexes
+
+    def get_cspace(self):
+        pass
 
     def generate_graph(self,screen):
         """
@@ -159,24 +166,24 @@ class Floorplan(object):
                     if polygon_search == polygon:
                         # no edges within a polygon
                         continue
-                    
+
                     for vertex_search in polygon_search.vertexes:
                         line = Edge(vertex, vertex_search)
-                        
-                        print("====> check nex line in graph: ", line) 
+
+                        print("====> check nex line in graph: ", line)
 
                         # check weather line intersects with any polygon edge
-                        
+
                         for polygon_intersect in self.polygons:
                             print("Check polygon intersection:")
                             append = True
                             for edge in polygon_intersect.edges:
                                 #print("CHECK EDGE", edge)
-                                
+
                                 # result=True -> intersection found
                                 intersect = line.check_intersect(edge)
                                 yield line, edge, intersect
-                                
+
                                 if intersect:
                                     break
 
@@ -186,51 +193,54 @@ class Floorplan(object):
                                 break
 
 
-                
+
                         if append:
                             self.graph.append(line)
-                            
+
                             #if polygon_intersect.check_intersect(line):
                             #    print("interrupt ")
                             #    intersect = True
                             #    break
-                        
+
                         #if intersect:
                         #    #graph.append(line)
                         #    yield(line, False)
                         #else:
                         #    yield(line, True
-        
+
 
     def set_width(self, width, margin=100):
         """
         Transform dxf coordinates to pygame coordinates.
         """
 
-        #print(self.polygons[0].vertexes) 
+        #print(self.polygons[0].vertexes)
         #all_vertexes = reduce(lambda p1,p2: p1.vertexes + p2.vertexes, self.polygons)
         for polygon in self.polygons:
             for i, vertex in enumerate(polygon.vertexes):
                 x, y = vertex
                 polygon.vertexes[i] = (x,-1*y)
-        
+
         for polygon in self.polygons:
             for i, edge in enumerate(polygon.edges):
                 x,y = edge.start
                 polygon.edges[i].start = (x,-1*y)
                 x,y = edge.end
                 polygon.edges[i].end = (x,-1*y)
-        
+
         all_vertexes = []
         for polygon in self.polygons:
             all_vertexes += polygon.vertexes
-        
+
         all_x, all_y = zip(*all_vertexes)
-        
+
         #all_y = list(filter(lambda x:x*-1, all_y))
         #print("ALL Y ",all_y)
 
-        xmin = min(all_x)-margin; xmax = max(all_x)+margin; ymin = min(all_y)-margin; ymax = max(all_y)+margin
+        xmin = min(all_x)-margin;
+        xmax = max(all_x)+margin;
+        ymin = min(all_y)-margin; 
+        ymax = max(all_y)+margin
 
         self.scale = width/(xmax-xmin)
         self.xoffset = xmin
@@ -262,23 +272,23 @@ class Floorplan(object):
         #        y -= yoffset
         #        y *= scale
         #        edge.start = (x,y)
-        #        
-        #        
+        #
+        #
         #        x, y = edge.end
         #        x -= xoffset
         #        x *= scale
         #        y -= yoffset
         #        y *= scale
         #        edge.end = (x,y)
-        #    
+        #
         #        print("EDGE after rescale: {}".format(edge))
 
         #for polygon in self.polygons:
         #    #print("Polygon:")
-        #    
+        #
         #    old = None
         #    for vertex in polygon.vertexes:
-        #        if old != None: 
+        #        if old != None:
         #            x1,y1 = old
         #            x2,y2 = vertex
 
