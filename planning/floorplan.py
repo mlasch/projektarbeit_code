@@ -239,7 +239,7 @@ class Floorplan(object):
 
         xmin = min(all_x)-margin;
         xmax = max(all_x)+margin;
-        ymin = min(all_y)-margin; 
+        ymin = min(all_y)-margin;
         ymax = max(all_y)+margin
 
         self.scale = width/(xmax-xmin)
@@ -299,7 +299,7 @@ class Floorplan(object):
 
         #    #print(polygon.vertexes)
 
-        print(f"SCREEN SIZE: {width}, {height}")
+        # print("SCREEN SIZE: {width}, {height}")
 
         return width, height
 
