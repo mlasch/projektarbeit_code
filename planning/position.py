@@ -30,5 +30,58 @@ def emitter_thread_circle(socketio):
 
         time.sleep(1/4)
 
+class Emitter():
+    def __init__(self, x, y, theta):
+        self.x = x
+        self.y = y
+        self.theta = theta
+
+    def emit(self):
+        UP = 1
+        DOWN = 2
+        TURN1 = 3
+        TURN2 = 4
+        state = DOWN
+
+        while True:
+            if state == DOWN:
+                if self.y > 2800:
+                    state = TURN2
+                else:
+                    self.y += 8
+
+            elif state == UP:
+                if self.y < 600:
+                    state = TURN1
+                else:
+                    self.y -= 8
+
+            elif state == TURN1:
+                if self.theta > math.pi:
+                    state = DOWN
+                else:
+
+                    self.theta += 2*math.pi/360*2
+
+            elif state == TURN2:
+                if self.theta <= 0:
+                    state = UP
+                else:
+
+                    self.theta -= 2*math.pi/360*2
+
+            yield self.x, self.y, self.theta
+
+
 def emitter_thread(socketio):
-    emitter_thread_circle(socketio)
+    #emitter_thread_circle(socketio)
+
+    emitter = Emitter(1700, 2800, 0)
+    for x,y,theta in emitter.emit():
+        position = {
+            "pos": {"x": x, "y": y},
+            "theta": theta
+        }
+
+        socketio.emit("json", json.dumps(position), namespace='/position')  # send to all clients in the namespace
+        time.sleep(1/20)

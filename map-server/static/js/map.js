@@ -25,22 +25,23 @@ class Node {
     this.pos_x = pos_x;
     this.pos_y = pos_y;
     this.theta = theta;
-    this.shape = new Polygon([new Vertex(-10, -10), new Vertex(10, -10), new Vertex(10, 10), new Vertex(0,20), new Vertex(-10, 10)]);
-    this.actual = new Polygon([]);
+    this.shape = new Polygon([new Vertex(-20, -20), new Vertex(20, -20), new Vertex(20, 20), new Vertex(0,40), new Vertex(-20, 20)]);
+    this.actual = new Polygon([new Vertex(0,0)]);
   }
-
   update_position(pos_x, pos_y, theta) {
     this.theta = theta;
-    this.pos_x = pos_x;
-    this.pos_y = pos_y;
+    this.pos_x = mp.scale_x(pos_x);
+    this.pos_y = mp.scale_y(-pos_y);
+
+    //console.log(mp.scale, mp.offset_x, mp.offset_y);
 
     let new_polygon = new Array();
     this.shape.vertexes.forEach(function(vertex) {
-      let x = Math.cos(theta)*vertex.x - Math.sin(theta)*vertex.y;
-      let y = Math.sin(theta)*vertex.x + Math.cos(theta)*vertex.y;
-
-      new_polygon.push(new Vertex(x+pos_x, y+pos_y));
-    });
+      let x = Math.cos(this.theta)*vertex.x - Math.sin(this.theta)*vertex.y;
+      let y = Math.sin(this.theta)*vertex.x + Math.cos(this.theta)*vertex.y;
+      
+      new_polygon.push(new Vertex(x + this.pos_x, y + this.pos_y));
+    }, this);
 
     this.actual = new Polygon(new_polygon);
   }
@@ -52,12 +53,12 @@ class Node {
 
 let mp  = new MapProperty(Infinity, -Infinity, Infinity, -Infinity);
 let obstacles = new Array();
-let robot = new Node(0,0,0);
-
-//let robot = new Polygon([new Vertex(-20, -20), new Vertex(20, -20), new Vertex(20, 20), new Vertex(-20, 20)]);
+let robot;
 
 let sketch = function(p) {
   p.setup = function() {
+    robot = new Node(0,0,0);
+    console.log(robot.actual);
     fetch("http://localhost:5000/floorplan")
       .then(function(response) {
         return response.json();
@@ -77,6 +78,8 @@ let sketch = function(p) {
             if (y > mp.max_y) mp.max_y = y;
           });
         });
+
+        console.log(mp.min_x, mp.max_x, mp.min_y, mp.max_y);
 
         mp.min_x = mp.min_x - margin;
         mp.max_x = mp.max_x + margin;
@@ -108,7 +111,8 @@ let sketch = function(p) {
               mp.height = p.windowHeight;
             }
 
-            // console.log(x + " to " + mp.scale_x(x));
+            //console.log("x: " + 1000 + " to " + mp.scale_x(1000));
+            //console.log("y: " + -y + " to " + mp.scale_y(y));
 
             vertexes.push(new Vertex(mp.scale_x(x), mp.scale_y(y)));
           });
@@ -155,6 +159,10 @@ let sketch = function(p) {
     p.fill(0);
     p.textSize(20);
     p.text("(" + robot.pos_x.toFixed(1) + ", " + robot.pos_y.toFixed(1) + ")", 10, 30);
+
+    //p.translate(100,100);
+    //robot.shape.show(p, [0,0,0]);
+    //p.translate(0,0);
   }
 }
 
