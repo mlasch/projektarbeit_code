@@ -2,6 +2,22 @@ import math
 import json
 import time
 
+from struct import unpack
+
+def position_handler(payload):
+    if len(payload) > 12:
+        print("Payload length missmatch")
+
+    x, y, theta = unpack("!fff", payload)
+
+    position = {
+        "pos": {"x": x, "y": y},
+        "theta": theta
+    }
+
+    return json.dumps(position)
+
+
 def emitter_thread_circle(socketio):
     phi = 0
     while True:

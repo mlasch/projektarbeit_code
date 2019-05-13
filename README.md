@@ -23,3 +23,9 @@ $ source python-venv/bin/activate
 (python-venv)$ pip3 install -r requirements.txt
 ```
 
+### Message Broker
+
+```
+$ sudo apt install mosquitto mosquitto-clients
+```
+
