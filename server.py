@@ -46,4 +46,4 @@ def handle_disconnect():
 
 if __name__ == '__main__':
     t1.start()
-    socketio.run(app, log_output=False)
+    socketio.run(app, host='0.0.0.0', log_output=False)

@@ -54,12 +54,13 @@ class Node {
 let mp  = new MapProperty(Infinity, -Infinity, Infinity, -Infinity);
 let obstacles = new Array();
 let robot;
+const BASE_URL = "http://"+window.location.hostname+":5000"
 
 let sketch = function(p) {
   p.setup = function() {
     robot = new Node(0,0,0);
     console.log(robot.actual);
-    fetch("http://localhost:5000/floorplan")
+    fetch(BASE_URL+"/floorplan")
       .then(function(response) {
         return response.json();
       })
@@ -127,7 +128,7 @@ let sketch = function(p) {
         p.background(220);
       });
 
-    let position = io.connect('http://localhost:5000/position'); // connect to namespace position
+    let position = io.connect(BASE_URL+'/position'); // connect to namespace position
 
     position.on('connect', function () {
         console.log("onconnect");
