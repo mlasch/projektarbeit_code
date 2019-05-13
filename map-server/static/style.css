@@ -1,2 +1,9 @@
-html, body {height:100%; margin:0; padding:0;}
-canvas {display:block;}
+html, body {
+  margin:auto;
+  padding:0;
+  background-color:black;
+}
+
+canvas {
+  display:block;
+}

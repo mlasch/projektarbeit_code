@@ -149,10 +149,11 @@ let sketch = function(p) {
     p.background(220);
 
     obstacles.forEach(function(polygon) {
-      polygon.cspace(robot.shape).show(p, [52, 211, 116]);
+      //polygon.cspace(robot.shape).show(p, [52, 211, 116]);
+      polygon.cspace(robot.shape).show(p, [240, 240, 240]);
     });
     obstacles.forEach(function(polygon) {
-      polygon.show(p, [244, 92, 66]);
+      polygon.show(p, [184, 32, 6]);
     });
 
     robot.show(p);
