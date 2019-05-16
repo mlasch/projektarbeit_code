@@ -27,7 +27,7 @@ class Node {
     this.world_x = 0;
     this.world_y = 0;
     this.theta = theta;
-    this.shape = new Polygon([new Vertex(-700, -700), new Vertex(700, -700), new Vertex(700, 700), new Vertex(0,1400), new Vertex(-700, 700)]);
+    this.shape = new Polygon([new Vertex(-140, -650), new Vertex(140,-650), new Vertex(350,-500), new Vertex(350,500), new Vertex(225,800), new Vertex(-225,800), new Vertex(-350,500), new Vertex(-350,-500)]);
     this.actual = new Polygon([new Vertex(0,0)]);
   }
   update_position(pos_x, pos_y, theta) {
