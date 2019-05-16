@@ -43,6 +43,7 @@ def index():
 
 @app.route('/floorplan')
 def get_floorplan():
+    floorplan.load_map()
     obstacles = list(floorplan.get_obstacles())
 
     data = {'obstacles': obstacles,
@@ -67,7 +68,6 @@ def handle_mqtt_message(client, userdata, message):
         result = position_handler(message.payload)
 
         if result:
-            print(result)
             socketio.emit('json', result, namespace='/position')
 
 if __name__ == '__main__':

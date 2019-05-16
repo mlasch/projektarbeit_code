@@ -112,6 +112,7 @@ class Polygon(object):
 
 class Floorplan(object):
     def __init__(self, dxf_path):
+        self.dxf_path = dxf_path
         self.world_xoffset = 2159
         self.world_yoffset = 7781
 
@@ -119,7 +120,11 @@ class Floorplan(object):
         self.edges = []
 
         self.graph = []
-        dwg = ezdxf.readfile(dxf_path)
+
+        self.load_map()
+
+    def load_map(self):
+        dwg = ezdxf.readfile(self.dxf_path)
 
         msp = dwg.modelspace()
         for polyline in msp.query('LWPOLYLINE'):
