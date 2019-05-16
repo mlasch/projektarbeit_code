@@ -51,7 +51,7 @@ class Node {
     }, this);
 
     this.actual = new Polygon(new_polygon);
-    console.log("Robot: ("+this.actual.vertexes[0].x+","+this.actual.vertexes[0].y+")");
+    //console.log("Robot: ("+this.actual.vertexes[0].x+","+this.actual.vertexes[0].y+")");
   }
 
   show(p) {
@@ -113,14 +113,10 @@ let sketch = function(p) {
           mp.height = p.windowHeight;
         }
 
-        console.log("A"+robot.shape.vertexes[0].x, robot.shape.vertexes[0].y);
-
         robot.shape.vertexes.forEach(function(v) {
           v.x = mp.scale*v.x;
           v.y = mp.scale*v.y;
         });
-
-        console.log("B"+robot.shape.vertexes[0].x, robot.shape.vertexes[0].y+" "+mp.scale);
 
         data.obstacles.forEach(function(polygon) {
           let vertexes = new Array();
@@ -186,8 +182,9 @@ let sketch = function(p) {
     robot.show(p);
     //p.circle(mp.scale_x(-1000), mp.scale_y(0), 10)
     p.fill(0);
+
     p.textSize(20);
-    p.text("(" + robot.world_x.toFixed(1) + ", " + robot.world_y.toFixed(1) + ")", 10, 30);
+    p.text("(" + robot.world_x.toFixed(1) + ", " + robot.world_y.toFixed(1) + "), Θ: "+robot.theta.toFixed(1)+"°", 10, 30);
 
     //p.translate(100,100);
     //robot.shape.show(p, [0,0,0]);
