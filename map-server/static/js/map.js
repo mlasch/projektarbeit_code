@@ -27,7 +27,7 @@ class Node {
     this.world_x = 0;
     this.world_y = 0;
     this.theta = theta;
-    this.shape = new Polygon([new Vertex(-20, -20), new Vertex(20, -20), new Vertex(20, 20), new Vertex(0,40), new Vertex(-20, 20)]);
+    this.shape = new Polygon([new Vertex(-700, -700), new Vertex(700, -700), new Vertex(700, 700), new Vertex(0,1400), new Vertex(-700, 700)]);
     this.actual = new Polygon([new Vertex(0,0)]);
   }
   update_position(pos_x, pos_y, theta) {
@@ -61,13 +61,11 @@ class Node {
 
 let mp  = new MapProperty(Infinity, -Infinity, Infinity, -Infinity);
 let obstacles = new Array();
-let robot;
+let robot = new Node(0,0,0);
 const BASE_URL = "http://"+window.location.hostname+":5000"
 
 let sketch = function(p) {
   p.setup = function() {
-    robot = new Node(0,0,0);
-    console.log(robot.actual);
     fetch(BASE_URL+"/floorplan")
       .then(function(response) {
         return response.json();
@@ -114,6 +112,15 @@ let sketch = function(p) {
           mp.width = (mp.max_x-mp.min_x)*mp.scale;
           mp.height = p.windowHeight;
         }
+
+        console.log("A"+robot.shape.vertexes[0].x, robot.shape.vertexes[0].y);
+
+        robot.shape.vertexes.forEach(function(v) {
+          v.x = mp.scale*v.x;
+          v.y = mp.scale*v.y;
+        });
+
+        console.log("B"+robot.shape.vertexes[0].x, robot.shape.vertexes[0].y+" "+mp.scale);
 
         data.obstacles.forEach(function(polygon) {
           let vertexes = new Array();
