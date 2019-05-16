@@ -110,9 +110,11 @@ class Polygon(object):
 
     #    return False
 
-
 class Floorplan(object):
     def __init__(self, dxf_path):
+        self.world_xoffset = 2159
+        self.world_yoffset = 7781
+
         self.polygons = []
         self.edges = []
 
@@ -131,7 +133,12 @@ class Floorplan(object):
             for point in polyline:
                 x, y, start_width, end_width, bulge = point
 
-                #print(x,y)
+                # turn axes and
+                # set offset to match world coordinates
+                x_temp = y - self.world_xoffset
+                y = (x - self.world_yoffset)
+                x = x_temp
+
                 polygon.add_vertex((x,y))
 
                 if last_point != None:
@@ -251,55 +258,7 @@ class Floorplan(object):
         #yscale = height/(ymax-ymin)
         self.yoffset = ymin
 
-        #print(f"scale: {scale}")
         print("BOUNARIES", xmin, xmax, ymin, ymax)
-
-        #for polygon in self.polygons:
-        #    for i, vertex in enumerate(polygon.vertexes):
-        #        x, y = vertex
-        #        x -= xoffset
-        #        x *= scale
-        #        y -= yoffset
-        #        y *= scale
-        #        polygon.vertexes[i] = (x,y)
-        #        print("VERTEX after rescale: {},{}".format(x,y))
-
-        #    for edge in polygon.edges:
-        #        print("EDGE before rescale: {}".format(edge))
-        #        x, y = edge.start
-        #        x -= xoffset
-        #        x *= scale
-        #        y -= yoffset
-        #        y *= scale
-        #        edge.start = (x,y)
-        #
-        #
-        #        x, y = edge.end
-        #        x -= xoffset
-        #        x *= scale
-        #        y -= yoffset
-        #        y *= scale
-        #        edge.end = (x,y)
-        #
-        #        print("EDGE after rescale: {}".format(edge))
-
-        #for polygon in self.polygons:
-        #    #print("Polygon:")
-        #
-        #    old = None
-        #    for vertex in polygon.vertexes:
-        #        if old != None:
-        #            x1,y1 = old
-        #            x2,y2 = vertex
-
-        #            distance = math.sqrt(math.pow(x2-x1,2) + math.pow(y2-y1,2))
-        #            #print(distance, end='-> ')
-        #        old = vertex
-        #    #print()
-
-        #    #print(polygon.vertexes)
-
-        # print("SCREEN SIZE: {width}, {height}")
 
         return width, height
 

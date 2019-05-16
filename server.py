@@ -10,11 +10,16 @@ from json import dumps
 
 import eventlet
 from flask import Flask, copy_current_request_context, request, jsonify
+from flask.logging import default_handler
 from flask_socketio import SocketIO, emit, send
 from flask_mqtt import Mqtt
 
 from planning import Floorplan
 from planning.position import position_handler
+
+logger = logging.getLogger('server')
+logger.setLevel(logging.DEBUG)
+logger.addHandler(default_handler)
 
 eventlet.monkey_patch()
 
@@ -23,15 +28,14 @@ app = Flask(__name__, static_folder='map-server/static')
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
-app.config['MQTT_BROKER_URL'] = '192.168.6.235'
+app.config['MQTT_BROKER_URL'] = 'localhost'
 app.config['MQTT_BROKER_PORT'] = 1883
 app.config['MQTT_REFRESH_TIME'] = 1.0
-mqtt = Mqtt(app)
+mqtt = Mqtt()
 
-floorplan = Floorplan("CAD Files/li27_example.dxf")
+floorplan = Floorplan("CAD Files/li27.dxf")
 
 clients = []
-#t1 = Thread(target=emitter_thread, args=(socketio,))
 
 @app.route('/')
 def index():
@@ -39,7 +43,11 @@ def index():
 
 @app.route('/floorplan')
 def get_floorplan():
-    data = list(floorplan.get_obstacles())
+    obstacles = list(floorplan.get_obstacles())
+
+    data = {'obstacles': obstacles,
+            'area': {'x': 1000, 'y': 1000}      # area in world coordinates
+            }
 
     return jsonify(data)
 
@@ -63,7 +71,9 @@ def handle_mqtt_message(client, userdata, message):
             socketio.emit('json', result, namespace='/position')
 
 if __name__ == '__main__':
-    #t1.start()
+    logger.log(logging.INFO, "Connecting to MQTT broker at {}:{}".format(
+        app.config['MQTT_BROKER_URL'],app.config['MQTT_BROKER_PORT']))
+    mqtt.init_app(app)
     mqtt.subscribe('position')
 
     socketio.run(app, host='0.0.0.0', log_output=True)
