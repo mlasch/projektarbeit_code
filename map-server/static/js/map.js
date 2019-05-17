@@ -41,7 +41,7 @@ class Arrow {
 
   show(p, color) {
     p.stroke(color)
-    p.strokeWeight(4);
+    p.strokeWeight(mp.scale*40);
     p.line(this.x1, this.y1, this.x2, this.y2);
   }
 }
@@ -221,10 +221,10 @@ let sketch = function(p) {
 
     robot.show(p);
 
-    robot.fb.update(10+robot.joy_x*10, robot.pos_x, robot.pos_y, robot.theta);
+    robot.fb.update(10+robot.joy_y*20*mp.scale, robot.pos_x, robot.pos_y, robot.theta);
     robot.fb.show(p, [255,0,0]);
 
-    robot.lr.update(10+robot.joy_y*10, robot.pos_x, robot.pos_y, robot.theta);
+    robot.lr.update(10+robot.joy_x*20*mp.scale, robot.pos_x, robot.pos_y, robot.theta);
     robot.lr.show(p, [0,255,0]);
 
 
