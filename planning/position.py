@@ -5,13 +5,15 @@ import time
 from struct import unpack
 
 def position_handler(payload):
-    if len(payload) > 12:
+    if len(payload) > 20:
         print("Payload length missmatch")
+        raise ValueError
 
-    x, y, theta = unpack("!fff", payload)
+    x, y, theta, joy_x, joy_y = unpack("!fffff", payload)
 
     position = {
         "pos": {"x": x, "y": y},
+        "joystick": {"x": joy_x, "y": joy_y},
         "theta": theta
     }
 

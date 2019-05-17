@@ -28,7 +28,7 @@ app = Flask(__name__, static_folder='map-server/static')
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
-app.config['MQTT_BROKER_URL'] = 'localhost'
+app.config['MQTT_BROKER_URL'] = '192.168.6.235'
 app.config['MQTT_BROKER_PORT'] = 1883
 app.config['MQTT_REFRESH_TIME'] = 1.0
 mqtt = Mqtt()
@@ -65,7 +65,10 @@ def handle_disconnect():
 @mqtt.on_message()
 def handle_mqtt_message(client, userdata, message):
     if message.topic == 'position':
-        result = position_handler(message.payload)
+        try:
+            result = position_handler(message.payload)
+        except ValueError:
+            result = None
 
         if result:
             socketio.emit('json', result, namespace='/position')

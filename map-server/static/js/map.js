@@ -20,23 +20,57 @@ class MapProperty {
   }
 }
 
+class Arrow {
+  constructor(angle) {
+    this.angle = angle
+    this.x1 = 0;
+    this.x2 = 0;
+    this.y1 = 0;
+    this.y2 = 0;
+  }
+
+  update(length, pos_x, pos_y, theta) {
+    this.x1 = pos_x;
+    this.y1 = pos_y;
+
+    this.x2 = pos_x + Math.cos(this.angle-theta+Math.PI)*length
+    this.y2 = pos_y + Math.sin(this.angle-theta+Math.PI)*length
+
+    //console.log(this.x1, this.y1, this.x2, this.y2);
+  }
+
+  show(p, color) {
+    p.stroke(color)
+    p.strokeWeight(4);
+    p.line(this.x1, this.y1, this.x2, this.y2);
+  }
+}
+
 class Node {
   constructor(pos_x, pos_y, theta) {
     this.pos_x = pos_x;
     this.pos_y = pos_y;
     this.world_x = 0;
     this.world_y = 0;
+    this.joy_x = 0;
+    this.joy_y = 0;
     this.theta = theta;
     this.shape = new Polygon([new Vertex(-140, -650), new Vertex(140,-650), new Vertex(350,-500), new Vertex(350,500), new Vertex(225,800), new Vertex(-225,800), new Vertex(-350,500), new Vertex(-350,-500)]);
     this.actual = new Polygon([new Vertex(0,0)]);
+
+    this.fb = new Arrow(Math.PI/2);
+    this.lr = new Arrow(Math.PI);
   }
-  update_position(pos_x, pos_y, theta) {
+  update_position(pos_x, pos_y, theta, joystick) {
     this.theta = theta; // -theta+Math.PI;
     this.pos_x = mp.scale_x(-pos_y);
     this.pos_y = mp.scale_y(-pos_x);
 
     this.world_x = pos_x;
     this.world_y = pos_y;
+
+    this.joy_x = joystick.x;
+    this.joy_y = joystick.y;
 
     //console.log(this.pos_x, this.pos_y, theta);
 
@@ -53,10 +87,15 @@ class Node {
 
     this.actual = new Polygon(new_polygon);
     //console.log("Robot: ("+this.actual.vertexes[0].x+","+this.actual.vertexes[0].y+")");
+
+    //this.fb.update
+
   }
 
   show(p) {
     this.actual.show(p, [100, 100, 100]);
+    //this.fb.show(p);
+    //this.lr.show(p);
   }
 }
 
@@ -162,7 +201,7 @@ let sketch = function(p) {
     position.on('json', function (json) {
       data = JSON.parse(json);
 
-      robot.update_position(data.pos.x, data.pos.y, data.theta);
+      robot.update_position(data.pos.x, data.pos.y, data.theta, data.joystick);
     });
 
     //position.emit("message", "test message");
@@ -181,12 +220,25 @@ let sketch = function(p) {
     });
 
     robot.show(p);
-    //p.circle(mp.scale_x(-1000), mp.scale_y(0), 10)
+
+    robot.fb.update(10+robot.joy_x*10, robot.pos_x, robot.pos_y, robot.theta);
+    robot.fb.show(p, [255,0,0]);
+
+    robot.lr.update(10+robot.joy_y*10, robot.pos_x, robot.pos_y, robot.theta);
+    robot.lr.show(p, [0,255,0]);
+
+
     // p.fill([184, 32, 6])
     // p.rect(0, 0, 200, 40);
     p.fill(0);
+    p.stroke(0);
+    p.strokeWeight(0);
     p.textSize(20);
     p.text("(" + robot.world_x.toFixed(1) + ", " + robot.world_y.toFixed(1) + "), Θ: "+(robot.theta/Math.PI*180).toFixed(0)+"°", 10, 30);
+
+    // p.fill(0);
+    // p.textSize(20);
+    // p.text("(" + robot.joy_x.toFixed(1) + ", " + robot.joy_y.toFixed(1) + ")", 100, 100);
 
     //p.translate(100,100);
     //robot.shape.show(p, [0,0,0]);
