@@ -31,7 +31,7 @@ class Node {
     this.actual = new Polygon([new Vertex(0,0)]);
   }
   update_position(pos_x, pos_y, theta) {
-    this.theta = -theta+Math.PI;
+    this.theta = theta; // -theta+Math.PI;
     this.pos_x = mp.scale_x(-pos_y);
     this.pos_y = mp.scale_y(-pos_x);
 
@@ -44,8 +44,9 @@ class Node {
 
     let new_polygon = new Array();
     this.shape.vertexes.forEach(function(vertex) {
-      let x = Math.cos(this.theta)*vertex.x - Math.sin(this.theta)*vertex.y;
-      let y = Math.sin(this.theta)*vertex.x + Math.cos(this.theta)*vertex.y;
+      let theta = -this.theta+Math.PI;
+      let x = Math.cos(theta)*vertex.x - Math.sin(theta)*vertex.y;
+      let y = Math.sin(theta)*vertex.x + Math.cos(theta)*vertex.y;
 
       new_polygon.push(new Vertex(x + this.pos_x, y + this.pos_y));
     }, this);
@@ -92,7 +93,7 @@ let sketch = function(p) {
 
         mp.min_x = mp.min_x - margin;
         mp.max_x = mp.max_x + margin;
-        mp.min_y = mp.min_y - margin;
+        mp.min_y = mp.min_y - margin*2.5;
         mp.max_y = mp.max_y + margin;
 
         if (p.windowHeight > p.windowWidth) {
@@ -181,10 +182,11 @@ let sketch = function(p) {
 
     robot.show(p);
     //p.circle(mp.scale_x(-1000), mp.scale_y(0), 10)
+    // p.fill([184, 32, 6])
+    // p.rect(0, 0, 200, 40);
     p.fill(0);
-
     p.textSize(20);
-    p.text("(" + robot.world_x.toFixed(1) + ", " + robot.world_y.toFixed(1) + "), Θ: "+robot.theta.toFixed(1)+"°", 10, 30);
+    p.text("(" + robot.world_x.toFixed(1) + ", " + robot.world_y.toFixed(1) + "), Θ: "+(robot.theta/Math.PI*180).toFixed(0)+"°", 10, 30);
 
     //p.translate(100,100);
     //robot.shape.show(p, [0,0,0]);
