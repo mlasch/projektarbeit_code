@@ -4,6 +4,7 @@ import os
 import logging
 import time
 import math
+import argparse
 
 from random import randint
 from json import dumps
@@ -21,6 +22,10 @@ logger = logging.getLogger('server')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(default_handler)
 
+parser = argparse.ArgumentParser(description='Robot position simulator')
+parser.add_argument('hostname', metavar='HOST', help='Hostname of the MQTT broker')
+args = parser.parse_args()
+
 eventlet.monkey_patch()
 
 app = Flask(__name__, static_folder='map-server/static')
@@ -28,7 +33,7 @@ app = Flask(__name__, static_folder='map-server/static')
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
-app.config['MQTT_BROKER_URL'] = '192.168.6.235'
+app.config['MQTT_BROKER_URL'] = args.hostname
 app.config['MQTT_BROKER_PORT'] = 1883
 app.config['MQTT_REFRESH_TIME'] = 1.0
 mqtt = Mqtt()
