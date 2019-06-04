@@ -4,6 +4,18 @@ import unittest
 
 from cspace_3d import Vertex, Edge, Obstacle, Graph
 
+class TestCSpace(unittest.TestCase):
+    def test_cspace(self):
+        polygon1 = Obstacle([Vertex(7,-4), Vertex(8,-7), Vertex(10,-4), Vertex(10,4), Vertex(9,4), Vertex(7,4)])
+        polygon2 = Obstacle([Vertex(-1,-1), Vertex(1,-1), Vertex(1,1), Vertex(-1,1)])
+
+        vertexes = polygon1.cspace(polygon2)
+
+        print(vertexes)
+
+        self.assertTrue(False)
+
+
 class TestVisibilityGraph(unittest.TestCase):
     def setUp(self):
         self.o1 = Obstacle([Vertex(7,-4), Vertex(8,-7), Vertex(10,-4), Vertex(10,4), Vertex(7,4)])
@@ -39,9 +51,6 @@ class TestVisibilityGraph(unittest.TestCase):
         graph = Graph.visibility_graph(self.map1)
 
         self.assertEqual(len(graph), 7)
-
-    def test_cspace(self):
-        self.assertTrue(False)
 
 if __name__ == '__main__':
     unittest.main()

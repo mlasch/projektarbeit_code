@@ -135,10 +135,11 @@ class Obstacle:
         S = []
 
         # 1. step calculate minkowsky sum
-        for vertex1 in self.vertexes:
-            for vertex2 in other.vertexes:
+        for vertex1 in self:
+            for vertex2 in other:
                 S.append(Vertex(vertex1.x + vertex2.x, vertex1.y + vertex2.y))
 
+        # 2. step form convex hull
         S.sort(key=lambda v: v.x)
         P = [S[0]]
         next_p = None
@@ -159,6 +160,8 @@ class Obstacle:
             P.append(next_p)
 
             start_p = next_p
+
+        # 3. remove intermediate vertexes
 
         return P
 

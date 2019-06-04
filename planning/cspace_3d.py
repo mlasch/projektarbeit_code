@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
     ax = Axes3D(plt.figure(figsize=(6.4*1.8, 4.8*1.8)))
 
-    INC = 180
+    INC = 20
 
     for theta in range(360//INC+1):
         theta *= INC
