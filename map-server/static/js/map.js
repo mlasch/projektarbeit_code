@@ -13,10 +13,36 @@ class MapProperty {
     this.height = null;
   }
   scale_x(x) {
+    // deprecated
     return mp.scale*(x-mp.offset_x);
   }
   scale_y(y) {
+    // deprecated
     return mp.scale*(y-mp.offset_y);
+  }
+
+  world_to_pixel(x, y) {
+    return [mp.scale*(x-mp.offset_x), mp.scale*(y-mp.offset_y)];
+  }
+
+  pixel_to_world(x, y) {
+    return [x,y];
+  }
+}
+
+class Checkpoint {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  update(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  show(p) {
+    p.ellipse(this.x, this.y, 10, 10);
   }
 }
 
@@ -63,8 +89,9 @@ class Node {
   }
   update_position(pos_x, pos_y, theta, joystick) {
     this.theta = theta; // -theta+Math.PI;
-    this.pos_x = mp.scale_x(-pos_y);
-    this.pos_y = mp.scale_y(-pos_x);
+    // this.pos_x = mp.scale_x(-pos_y);
+    // this.pos_y = mp.scale_y(-pos_x);
+    [this.pos_x, this.pos_y] = mp.world_to_pixel(-pos_y, -pos_x);
 
     this.world_x = pos_x;
     this.world_y = pos_y;
@@ -101,7 +128,8 @@ class Node {
 
 let mp  = new MapProperty(Infinity, -Infinity, Infinity, -Infinity);
 let obstacles = new Array();
-let robot = new Node(0,0,0);
+const robot = new Node(0,0,0);
+const cp = new Checkpoint(0,0);
 const BASE_URL = "http://"+window.location.hostname+":5000"
 
 let sketch = function(p) {
@@ -161,16 +189,17 @@ let sketch = function(p) {
         data.obstacles.forEach(function(polygon) {
           let vertexes = new Array();
           polygon.forEach(function(vertex) {
-            let x = vertex[1];
-            let y = -vertex[0];
+            // let x = vertex[1];
+            // let y = -vertex[0];
 
             //if ((mp.max_y - mp.min_y) > (mp.max_x - mp.min_x)) {
 
 
             //console.log("x: " + 1000 + " to " + mp.scale_x(1000));
             //console.log("y: " + -y + " to " + mp.scale_y(y));
-
-            vertexes.push(new Vertex(mp.scale_x(x), mp.scale_y(y)));
+            const [x, y] = mp.world_to_pixel(vertex[1], -vertex[0]);
+            // vertexes.push(new Vertex(mp.scale_x(x), mp.scale_y(y)));
+            vertexes.push(new Vertex(x, y));
           });
 
           obstacles.push(new Polygon(vertexes));
@@ -227,7 +256,7 @@ let sketch = function(p) {
     robot.lr.update(10+robot.joy_x*20*mp.scale, robot.pos_x, robot.pos_y, robot.theta);
     robot.lr.show(p, [0,255,0]);
 
-
+    cp.show(p);
     // p.fill([184, 32, 6])
     // p.rect(0, 0, 200, 40);
     p.fill(0);
@@ -243,6 +272,21 @@ let sketch = function(p) {
     //p.translate(100,100);
     //robot.shape.show(p, [0,0,0]);
     //p.translate(0,0);
+  }
+  p.mouseReleased = async function() {
+    const [xw, yw] = mp.pixel_to_world(p.mouseX, p.mouseY);
+    console.log("Mouse released", xw, yw);
+    cp.update(p.mouseX, p.mouseY);
+    const response = await fetch('/plan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({'x': xw, 'y': yw})
+    });
+    const checkpoints = await response.json();
+
+    console.log(checkpoints);
   }
 }
 

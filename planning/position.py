@@ -17,8 +17,7 @@ def position_handler(payload):
         "theta": theta
     }
 
-    return json.dumps(position)
-
+    return position
 
 def emitter_thread_circle(socketio):
     phi = 0

@@ -7,7 +7,7 @@ import math
 import argparse
 
 from random import randint
-from json import dumps
+from json import dumps, loads
 
 import eventlet
 from flask import Flask, copy_current_request_context, request, jsonify
@@ -17,6 +17,8 @@ from flask_mqtt import Mqtt
 
 from planning import Floorplan
 from planning.position import position_handler
+
+from time import sleep
 
 logger = logging.getLogger('server')
 logger.setLevel(logging.DEBUG)
@@ -57,6 +59,16 @@ def get_floorplan():
 
     return jsonify(data)
 
+@app.route('/plan', methods=['POST'])
+def path_planner():
+    print("POST:", request.json)
+
+    sleep(1)
+
+    floorplan.path_planner((request.json['x'], request.json['y']))
+
+    return jsonify({'checkpoints': []})
+
 @socketio.on('connect', namespace='/position')
 def handle_connect():
     clients.append(request.sid)
@@ -76,7 +88,8 @@ def handle_mqtt_message(client, userdata, message):
             result = None
 
         if result:
-            socketio.emit('json', result, namespace='/position')
+            floorplan.update_pos((result['pos'], result['theta']))
+            socketio.emit('json', dumps(result), namespace='/position')
 
 if __name__ == '__main__':
     logger.log(logging.INFO, "Connecting to MQTT broker at {}:{}".format(
