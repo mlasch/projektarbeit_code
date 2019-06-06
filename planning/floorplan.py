@@ -137,15 +137,14 @@ class Floorplan(object):
             polygon = []
 
             for point in polyline:
-                x, y, start_width, end_width, bulge = point
+                xc, yc, start_width, end_width, bulge = point
 
                 # turn axes and
                 # set offset to match world coordinates
-                x_temp = y - self.world_xoffset
-                y = (x - self.world_yoffset)
-                x = x_temp
+                xw = yc - self.world_xoffset
+                yw = -(xc - self.world_yoffset)
 
-                polygon.append((x,y))
+                polygon.append((xw,yw))
 
             self.polygons.append(PlanPolygon(polygon))
 
