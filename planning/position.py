@@ -2,7 +2,7 @@ import math
 import json
 import time
 
-from struct import unpack
+from struct import unpack, pack
 
 def position_handler(payload):
     if len(payload) > 20:
@@ -17,8 +17,16 @@ def position_handler(payload):
         "theta": theta
     }
 
-    return json.dumps(position)
+    return position
 
+def checkpoint_handler(checkpoints):
+    data = b""
+
+    for checkpoint in checkpoints:
+        print("TEST", checkpoint)
+        data += pack("!ff", checkpoint['x'], checkpoint['y'])
+
+    return data
 
 def emitter_thread_circle(socketio):
     phi = 0

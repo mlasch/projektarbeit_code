@@ -12,11 +12,36 @@ class MapProperty {
     this.width = null;
     this.height = null;
   }
-  scale_x(x) {
-    return mp.scale*(x-mp.offset_x);
+
+  world_to_pixel(xw, yw) {
+    const xp = this.scale * (-yw - this.offset_x);
+    const yp = this.scale * (-xw - this.offset_y);
+    return [xp, yp];
   }
-  scale_y(y) {
-    return mp.scale*(y-mp.offset_y);
+
+  pixel_to_world(xp, yp) {
+    const xw = -(yp / this.scale + this.offset_y);
+    const yw = -(xp / this.scale + this.offset_x);
+    return [xw, yw];
+  }
+}
+
+class Checkpoint {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  update(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  show(p, c) {
+    p.strokeWeight(mp.scale*30);
+    p.stroke(100,100,100)
+    p.fill(c);
+    p.ellipse(this.x, this.y, mp.scale*200, mp.scale*200);
   }
 }
 
@@ -35,8 +60,6 @@ class Arrow {
 
     this.x2 = pos_x + Math.cos(this.angle-theta+Math.PI)*length
     this.y2 = pos_y + Math.sin(this.angle-theta+Math.PI)*length
-
-    //console.log(this.x1, this.y1, this.x2, this.y2);
   }
 
   show(p, color) {
@@ -63,8 +86,7 @@ class Node {
   }
   update_position(pos_x, pos_y, theta, joystick) {
     this.theta = theta; // -theta+Math.PI;
-    this.pos_x = mp.scale_x(-pos_y);
-    this.pos_y = mp.scale_y(-pos_x);
+    [this.pos_x, this.pos_y] = mp.world_to_pixel(pos_x, pos_y);
 
     this.world_x = pos_x;
     this.world_y = pos_y;
@@ -72,7 +94,7 @@ class Node {
     this.joy_x = joystick.x;
     this.joy_y = joystick.y;
 
-    //console.log(this.pos_x, this.pos_y, theta);
+    // console.log(this.pos_x, this.pos_y, theta);
 
     //console.log(mp.scale, mp.offset_x, mp.offset_y);
 
@@ -99,102 +121,140 @@ class Node {
   }
 }
 
+async function getObstacles(p) {
+  const response = await fetch(BASE_URL+"/floorplan");
+  const data = await response.json();
+  const margin = 300;
+
+  // load all
+  data.obstacles.forEach(function(polygon) {
+    polygon.forEach(function(vertex) {
+      const xw = vertex[0];
+      const yw = vertex[1];
+
+      const x = -yw;  // transform for pixel
+      const y = -xw;
+
+      if (x < mp.min_x) mp.min_x = x;
+      if (x > mp.max_x) mp.max_x = x;
+      if (y < mp.min_y) mp.min_y = y;
+      if (y > mp.max_y) mp.max_y = y;
+    });
+  });
+
+  // window dimensions should be fetched from the server
+  console.log(mp.min_x, mp.max_x, mp.min_y, mp.max_y);
+
+  mp.min_x = mp.min_x - margin;
+  mp.max_x = mp.max_x + margin;
+  mp.min_y = mp.min_y - margin*2.5;
+  mp.max_y = mp.max_y + margin;
+
+  const totalWidth = mp.max_x - mp.min_x;
+  const totalHeight = mp.max_y - mp.min_y;
+
+  if (p.windowHeight > p.windowWidth) {
+    // scale to width
+    mp.scale = p.windowWidth/totalWidth;
+    mp.offset_x = mp.min_x;
+    mp.offset_y = mp.min_y;
+
+    mp.width = p.windowWidth;
+    mp.height = totalHeight*mp.scale;
+  } else {
+    // scale to height
+    mp.scale = p.windowHeight/totalHeight;
+    mp.offset_x = mp.min_x;
+    mp.offset_y = mp.min_y;
+
+    mp.width = totalWidth*mp.scale;
+    mp.height = p.windowHeight;
+  }
+
+  robot.shape.vertexes.forEach(function(v) {
+    v.x = mp.scale*v.x;
+    v.y = mp.scale*v.y;
+  });
+
+  data.obstacles.forEach(function(polygon) {
+    const vertexes = new Array();
+    polygon.forEach(function(vertex) {
+      const xw = vertex[0];
+      const yw = vertex[1];
+
+      const [xp, yp] = mp.world_to_pixel(xw, yw);
+      //console.log("WORLD TO PIXEL", xw, yw, xp, yp);
+      vertexes.push(new Vertex(xp, yp));
+    });
+
+    obstacles.push(new Polygon(vertexes));
+  });
+
+  p.createCanvas(mp.width, mp.height);
+  p.background(220);
+}
+
+async function mouseActionLeft(xp, yp) {
+  const [xw, yw] = mp.pixel_to_world(xp, yp);
+
+  cp.update(xp, yp);
+
+  // const response = await fetch('/plan', {
+  //   method: 'POST',
+  //   headers: {
+  //     'Content-Type': 'application/json'
+  //   },
+  //   body: JSON.stringify({'x': xw, 'y': yw})
+  // });
+  // const checkpoints = await response.json();
+
+  // console.log(checkpoints);
+}
+
+async function mouseActionRight(xp, yp) {
+  const [xw, yw] = mp.pixel_to_world(xp, yp);
+
+  cp_list.push(new Checkpoint(xp, yp));
+}
+
+function deleteCheckpointsAction() {
+  cp_list = new Array();
+}
+
+async function startCheckpointsAction() {
+  const json_list = new Array();
+  cp_list.forEach(function(cp_elem) {
+    const [xw, yw] = mp.pixel_to_world(cp_elem.x, cp_elem.y);
+    json_list.push({'x': xw, 'y': yw});
+  });
+  const [xw, yw] = mp.pixel_to_world(cp.x, cp.y);
+  json_list.push({'x': xw, 'y': yw});
+
+  const response = await fetch('/checkpoints', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(json_list)
+  });
+}
+
 let mp  = new MapProperty(Infinity, -Infinity, Infinity, -Infinity);
 let obstacles = new Array();
-let robot = new Node(0,0,0);
+const robot = new Node(-100,-100,0);
+const cp = new Checkpoint(-100,-100);
+let cp_list = new Array();
 const BASE_URL = "http://"+window.location.hostname+":5000"
 
 let sketch = function(p) {
   p.setup = function() {
-    fetch(BASE_URL+"/floorplan")
-      .then(function(response) {
-        return response.json();
-      })
-      .then(function(data) {
-        // find window dimensions
-        const margin = 300;
 
-        data.obstacles.forEach(function(polygon) {
-          polygon.forEach(function(vertex) {
-            let x = vertex[1];
-            let y = -vertex[0];
-
-            //console.log("("+vertex[0]+","+vertex[1]+") -> ("+x+","+y+")");
-
-            if (x < mp.min_x) mp.min_x = x;
-            if (x > mp.max_x) mp.max_x = x;
-            if (y < mp.min_y) mp.min_y = y;
-            if (y > mp.max_y) mp.max_y = y;
-          });
-        });
-
-        console.log(mp.min_x, mp.max_x, mp.min_y, mp.max_y);
-
-        mp.min_x = mp.min_x - margin;
-        mp.max_x = mp.max_x + margin;
-        mp.min_y = mp.min_y - margin*2.5;
-        mp.max_y = mp.max_y + margin;
-
-        if (p.windowHeight > p.windowWidth) {
-          // scale to width
-          mp.scale = p.windowWidth/(mp.max_x-mp.min_x);
-          mp.offset_x = mp.min_x;
-          mp.offset_y = mp.min_y;
-
-          mp.width = p.windowWidth;
-          mp.height = (mp.max_y-mp.min_y)*mp.scale;
-        } else {
-          // scale to height
-          mp.scale = p.windowHeight/(mp.max_y-mp.min_y);
-          mp.offset_x = mp.min_x;
-          mp.offset_y = mp.min_y;
-
-          mp.width = (mp.max_x-mp.min_x)*mp.scale;
-          mp.height = p.windowHeight;
-        }
-
-        robot.shape.vertexes.forEach(function(v) {
-          v.x = mp.scale*v.x;
-          v.y = mp.scale*v.y;
-        });
-
-        data.obstacles.forEach(function(polygon) {
-          let vertexes = new Array();
-          polygon.forEach(function(vertex) {
-            let x = vertex[1];
-            let y = -vertex[0];
-
-            //if ((mp.max_y - mp.min_y) > (mp.max_x - mp.min_x)) {
-
-
-            //console.log("x: " + 1000 + " to " + mp.scale_x(1000));
-            //console.log("y: " + -y + " to " + mp.scale_y(y));
-
-            vertexes.push(new Vertex(mp.scale_x(x), mp.scale_y(y)));
-          });
-
-          obstacles.push(new Polygon(vertexes));
-        });
-
-        // let r_vertexes = new Array();
-        // robot.shape.vertexes.forEach(function(v) {
-        //   r_vertexes.push(new Vertex(mp.scale_x(v.x), mp.scale_y(v.y)));
-        // });
-        //
-        // robot.shape = new Polygon(r_vertexes);
-
-        // console.log(mp.min_x, mp.max_x, mp.min_y, mp.max_y);
-        // console.log(mp.scale, mp.offset_x, mp.offset_y);
-        // console.log(mp.width, mp.height);
-
-        p.createCanvas(mp.width, mp.height);
-        p.background(220);
-      });
+    getObstacles(p);
 
     let position = io.connect(BASE_URL+'/position'); // connect to namespace position
 
     position.on('connect', function () {
-        console.log("onconnect");
+        console.log("iosocket connected");
 
       });
 
@@ -203,8 +263,6 @@ let sketch = function(p) {
 
       robot.update_position(data.pos.x, data.pos.y, data.theta, data.joystick);
     });
-
-    //position.emit("message", "test message");
     p.frameRate(30);
   }
 
@@ -227,22 +285,37 @@ let sketch = function(p) {
     robot.lr.update(10+robot.joy_x*20*mp.scale, robot.pos_x, robot.pos_y, robot.theta);
     robot.lr.show(p, [0,255,0]);
 
+    // draw Checkpoints
+    cp.show(p, [255,0,0]);
 
-    // p.fill([184, 32, 6])
-    // p.rect(0, 0, 200, 40);
+    cp_list.forEach(function(cp_elem) {
+      cp_elem.show(p, [0,255,0])
+    });
+
     p.fill(0);
     p.stroke(0);
     p.strokeWeight(0);
-    p.textSize(20);
-    p.text("(" + robot.world_x.toFixed(1) + ", " + robot.world_y.toFixed(1) + "), Θ: "+(robot.theta/Math.PI*180).toFixed(0)+"°", 10, 30);
+    p.textSize(mp.scale*400);
+    p.text("(" + robot.world_x.toFixed(1) + ", " + robot.world_y.toFixed(1) + "), Θ: "+(robot.theta/Math.PI*180).toFixed(0)+"°", mp.scale*100, mp.scale*400);
+  }
+  p.mouseReleased = function() {
+    if (p.mouseButton === p.LEFT) {
+      mouseActionLeft(p.mouseX, p.mouseY);
+    }
+    if (p.mouseButton === p.RIGHT) {
+      mouseActionRight(p.mouseX, p.mouseY);
+    }
 
-    // p.fill(0);
-    // p.textSize(20);
-    // p.text("(" + robot.joy_x.toFixed(1) + ", " + robot.joy_y.toFixed(1) + ")", 100, 100);
+    p.keyPressed = function() {
+      if (p.keyCode === p.ESCAPE) {
+        deleteCheckpointsAction();
+      }
 
-    //p.translate(100,100);
-    //robot.shape.show(p, [0,0,0]);
-    //p.translate(0,0);
+      if (p.key === 'p') {
+        startCheckpointsAction();
+      }
+    }
+
   }
 }
 
