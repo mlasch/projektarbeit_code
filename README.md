@@ -10,6 +10,11 @@ Install `python3-venv` package
 $ sudo apt install python3-venv python3-dev libsdl-dev libsdl-image1.2-dev libsdl-mixer1.2-dev libsdl-ttf2.0-dev
 ```
 
+For shapely
+```
+$ sudo apt install libgeos-dev
+```
+
 Create a virtual environment for `python3`
 
 ```
@@ -20,7 +25,14 @@ Install requirements from the file
 
 ```
 $ source .venv/bin/activate
+(.venv)$ pip3 install wheel
 (.venv)$ pip3 install -r requirements.txt
+```
+
+Check shapely speedups:
+```
+>>> from shapely import speedups
+>>> speedups.enabled
 ```
 
 ### Message Broker
@@ -34,7 +46,7 @@ or run it inside a Docker container:
 
 ```
 $ cd docker
-$ docker build -t mqtt-broker . 
+$ docker build -t mqtt-broker .
 ```
 
 ```
@@ -43,4 +55,4 @@ $ docker run -p 1883:1883 -t mqtt-broker
 
 List the installed Docker images with `docker image ls` or `docker system df` in either case sometimes it's necessary to reset the environment: `docker system prune`  
 
-Tagging the Docker image after building: `docker tag 3b6b527f221b mqtt-broker` 
+Tagging the Docker image after building: `docker tag 3b6b527f221b mqtt-broker`
