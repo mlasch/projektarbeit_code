@@ -314,6 +314,9 @@ let sketch = function(p) {
       if (p.key === 'p') {
         startCheckpointsAction();
       }
+      if (p.key === 'u') {
+        cp_list.pop();
+      }
     }
 
   }
