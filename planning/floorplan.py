@@ -8,71 +8,34 @@ import matplotlib.pyplot as plt
 
 from functools import reduce
 from collections import OrderedDict
+from time import time
 
 from planning.shapes import Point, PlanPolygon, LineString
-from shapely.ops import polygonize_full, cascaded_union, unary_union
+from shapely.ops import polygonize_full, unary_union
 import networkx as nx
 from networkx import astar_path
+from networkx.exception import NodeNotFound, NetworkXError
 
-# class Edge(object):
-#     def __init__(self, start, end):
-#         self.start = start
-#         self.end = end
-#
-#     def check_intersect(self, other):
-#         result =  check_junction(self.start, self.end, other.start, other.end)
-#         print("|-->Check: ",self, other)
-#
-#         return result
-#
-#     def __str__(self):
-#         return "<Edge {:1.1f},{:1.1f}-->{:1.1f},{:1.1f}>".format(self.start[0], self.start[1], self.end[0], self.end[1])
-
-# class Polygon(object):
-#     def __init__(self, vertexes=None):
-#         if vertexes == None:
-#             self.vertexes = []
-#         else:
-#             self.vertexes = vertexes
-#
-#         self.edges = []
-#
-#     def add_vertex(self, vertex):
-#         self.vertexes.append(vertex)
-#
-#     def add_edge(self, edge):
-#         self.edges.append(edge)
-#
-#     #def check_intersect(self, line):
-#     #    for edge in self.edges:
-#     #
-#     #        print("=======================")
-#     #        print("start", edge.start, edge.end)
-#
-#     #        print("end", line.start, edge.end)
-#     #
-#     #        print("=======================")
-#     #        if edge.check_intersect(line):
-#     #            return True
-#
-#     #    return False
 
 class Vertex:
-    def __init__(self, point, theta, parent=None, neighbors=None):
-        self.point = point
-        self.theta = theta
+    def __init__(self, x, y):
+        self.x = float(x)
+        self.y = float(y)
+        #self.p = Point(x,y)
 
-        if not parent:
-            self.parent = []
-        else:
-            self.parent = parent
+    def __eq__(self, other):
+        return self.x == other.x and self.y == other.y
 
-        if not neighbors:
-            self.neighbors = []
-        else:
-            self.neighbors = neighbors
+    def __hash__(self):
+        return hash((self.x, self.y))
 
-HYPOTENUSE = 10000
+
+    def __repr__(self):
+        return "{} {}".format(self.x, self.y)
+
+    def weight(self, other):
+        return ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
+
 
 class Floorplan(object):
     def __init__(self, dxf_path, position=None):
@@ -82,6 +45,11 @@ class Floorplan(object):
 
         INC = 5
         self.obstacles = []
+        self.bobstacles = []
+
+        self.old_start = None
+        self.old_dest = None
+
         self.angles = np.linspace(0,2*np.pi, INC)
         self.angles = np.append(self.angles[:-1], [0])
         print(self.angles)
@@ -92,15 +60,16 @@ class Floorplan(object):
         self.lines = [[] for _ in range(len(self.angles))]
         self.vertical = [[] for _ in range(len(self.angles))]
 
-        self.graph = nx.Graph()
+        self.graph = None
 
 
         if position == None:
-            self.position = ({'x':0, 'y':0}, 0)
+            self.position = ({'x':-62, 'y':942}, 0)
         else:
             self.position = position
 
         self.load_map()
+
 
     def load_map(self):
         dwg = ezdxf.readfile(self.dxf_path)
@@ -120,108 +89,104 @@ class Floorplan(object):
                 xw = yc - self.world_xoffset
                 yw = -(xc - self.world_yoffset)
 
-                polygon.append((xw,yw))
+                polygon.append((xw, yw))
 
             self.obstacles.append(PlanPolygon(polygon))
 
-        #self.preload_cspace()
+        robot_radius = self.get_robot_buffer()
 
-    def preload_cspace(self):
-        print("PRELOAD CSPACE")
-        # preload cspace
-        for theta_idx, theta in enumerate(self.angles):
-            for obstacle in self.obstacles:
-                cspace = (self.robot.rotate(theta)+obstacle).convex_hull
-                self.cspaces[theta_idx].append(cspace)
+        self.bobstacles = []
 
-        # create lines, TODO: cut lines a max coordinates of map
-        for theta_idx, theta in enumerate(self.angles):
-            # Line Collection
-            for cspace in self.cspaces[theta_idx]:
+        for obstacle in self.obstacles:
+            self.bobstacles.append(obstacle.buffer(robot_radius/2).simplify(20))
+            #self.bobstacles.append(obstacle)
 
-                #### Add directional lines to the line collection
-                for vertex in cspace.exterior.coords:
-                    x0, y0 = vertex
-
-                    x1 = x0 + HYPOTENUSE*np.cos(theta)
-                    y1 = y0 + HYPOTENUSE*np.sin(theta)
-                    x2 = x0 - HYPOTENUSE*np.cos(theta)
-                    y2 = y0 - HYPOTENUSE*np.sin(theta)
-
-                    line1 = LineString([(x0,y0), (x2,y2)])
-                    line2 = LineString([(x1,y1), (x0,y0)])
-                    fragments = [line1, line2]
-
-                    for cspace_check in self.cspaces[theta_idx]:
-                        fragments_temp = []
-                        for cline in fragments:
-                            fragment = cline.difference(cspace_check.buffer(-0.001)) # HACK
-                            #fragment = cline.difference(cspace_check)
-                            try:
-                                fragments_temp.extend(fragment)
-                            except TypeError:
-                                fragments_temp.append(fragment)
-                        fragments = fragments_temp
-
-                    self.lines[theta_idx].extend(fragments)
-
-            print(len(self.lines[theta_idx]))
-
-
-        # for theta in [0, 0.1*math.pi]:
-        #     if theta not in self.cspace.keys():
-        #         self.cspace.update({theta: []})
-        #
-        #     for polygon in self.polygons:
-        #         p1 = self.robot.rotate(theta)+polygon
-        #
-        #         # remove vetexes along a line
-        #         result, dangles, cuts, invalids = polygonize_full(p1.convex_hull.exterior)
-        #
-        #         if len(result) > 1:
-        #             raise TypeError
-        #         self.cspace[theta].append(result[0]) # use first result from function
-        #
-        #     polygons = unary_union(self.cspace[theta])
-        #     #self.cspace[theta] = polygons
-        #     #print(polygons.interior)
-        #
-        # # create navigation graph
-        # self.create_graph()
-
-
-        ################################# plotting
-
-        for line in self.lines[0]:
-            plt.plot(*line.coords.xy)
-
-        # for polygon in self.polygons:
-        #     plt.scatter(*polygon.exterior.coords.xy)
-        # theta = 0.1*math.pi
-        # plt.plot(*self.robot.rotate(theta).exterior.coords.xy, linewidth=2)
-        #
-        for polygon in self.cspaces[0]:
-            #plt.scatter(*polygon.exterior.coords.xy)
-            plt.plot(*polygon.exterior.coords.xy, linewidth='2', color='k')
-
-        plt.show()
-        #
-        # for p1 in self.cspace[theta]:
-        #     for p2 in self.cspace[theta]:
-        #         if p1 == p2:
-        #             continue
-        #
-        #         pint = p1.exterior.intersection(p2.exterior)
-        #         for p in pint:
-        #             plt.scatter(*p.coords.xy, marker='x')
-        #
-        # for line in self.graph[theta]:
-        #     plt.plot(*line.coords.xy, linewidth=0.4, color='black')
-        #
+        ###### DEBUG
+        # for obstacle in self.bobstacles:
+        #     plt.plot(*obstacle.exterior.coords.xy)
+        # plt.axis('equal')
         # plt.show()
+        ###### END DEBUG
 
-        #############################################3
+        # preload graph
+        print("Start preloading graph")
+        tstart = time()
+        self.graph = nx.Graph()
+        print("{} {}".format(len(self.graph.nodes()), len(self.graph.edges())))
+        for obstacle1 in self.bobstacles:
+            for v1 in obstacle1.exterior.coords:
+                for obstacle2 in self.bobstacles:
+                    for v2 in obstacle2.exterior.coords:
+                        if v1 == v2:
+                            # same vertices
+                            continue
 
+                        line = LineString([v1, v2])
+
+                        is_sightline = True
+                        # union_bobstacles = unary_union(self.bobstacles)
+                        # if line.within(union_bobstacles) or line.crosses(union_bobstacles):
+                        #     is_sightline = False
+
+                        for obstacle3 in self.bobstacles:
+                            if line.within(obstacle3) or line.crosses(obstacle3):
+                                is_sightline = False
+
+                        if is_sightline:
+                            vx1 = Vertex(*v1)
+                            vx2 = Vertex(*v2)
+                            self.graph.add_edge(vx1, vx2, weight=vx1.weight(vx2))
+
+        tend = time()
+        print("Preloaded graph in {} with {} nodes and {} edges".format(tend-tstart,
+        len(self.graph.nodes()),
+        len(self.graph.edges())))
+
+    def update_sight_graph(self, start, dest):
+
+        if self.old_start and self.old_dest:
+            self.graph.remove_node(self.old_start)
+            self.graph.remove_node(self.old_dest)
+
+        for obstacle1 in self.bobstacles:
+            for v1 in obstacle1.exterior.coords:
+                for v2 in [(start.x, start.y), (dest.x, dest.y)]:
+                    line = LineString([v1, v2])
+
+                    is_sightline = True
+                    tstart1 = time()
+                    #union_bobstacles = unary_union(self.bobstacles)
+                    #print("union:", time()-tstart1)
+
+                    for obstacle3 in self.bobstacles:
+                        if line.within(obstacle3) or line.crosses(obstacle3):
+                            is_sightline = False
+
+                    if is_sightline:
+                        vx1 = Vertex(*v1)
+                        vx2 = Vertex(*v2)
+                        self.graph.add_edge(vx1, vx2, weight=vx1.weight(vx2))
+
+
+        #### DEBUG plotting
+        # ## OBSTACLES
+        # for obstacle in self.bobstacles:
+        #     plt.fill(*obstacle.exterior.coords.xy)
+        #
+        #
+        # ## Graph
+        # for edge in self.graph.edges():
+        #     v1, v2 = edge
+        #     plt.plot([v1.x, v2.x], [v1.y, v2.y], lineWidth=1, color='k')
+        #
+        # for node in self.graph.nodes():
+        #     plt.scatter(node.x, node.y, s=10, color='b')
+        #
+        # ## Path
+        #
+        # plt.axis('equal')
+        # plt.show()
+        #### END DEBUG plotting
 
     def get_obstacles(self):
         for polygon in self.obstacles:
@@ -230,191 +195,43 @@ class Floorplan(object):
     def update_pos(self, position):
         self.position = position
 
-    def update_graph(self):
-        pass
+    def get_robot_buffer(self):
+        """
+        Computes the minimum circle radius around the robot
+        """
+        max_dist = 0
+        for line in self.robot.exterior.coords:
+            cur_dist = Point(0,0).distance(Point(*line))
+            if max_dist < cur_dist:
+                max_dist = cur_dist
+        return max_dist
 
+    def shortest_path(self, vstart, vdest):
+        try:
+            path = nx.astar_path(self.graph, vstart, vdest)
+            self.old_start = vstart
+            self.old_dest = vdest
 
+        except NodeNotFound as nf:
+            print("Node not found, {}".format(nf))
+            self.old_start = None
+            self.old_dest = None
+            path = [] # return empty list
 
-
-
-        # # generate sight graph
-        # theta = 0.1*math.pi
-        # if theta not in self.graph.keys():
-        #     self.graph.update({theta: []})
-        #     #self.graph = nx.Graph()
-        #
-        # vertexes = []
-        # for p1 in self.cspace[theta]:
-        #     for x1, y1 in p1.exterior.coords:
-        #         point1 = Point(x1,y1)
-        #         v = Vertex(point1, theta, parent=p1)
-        #         is_within = False
-        #         for polygon_check in self.cspace[theta]:
-        #             if point1.within(polygon_check):
-        #                 is_within = True
-        #         if not is_within:
-        #             vertexes.append(v)
-        #
-        #     # add vertexes on polygon intersections
-        #     for p2 in self.cspace[theta]:
-        #         if p1 == p2:
-        #             continue
-        #
-        #         pint = p1.exterior.intersection(p2.exterior)
-        #         for p in pint:
-        #             for x2,y2 in p.coords:
-        #                 v = Vertex(Point(x2, y2),theta, parent=p1)
-        #                 vertexes.append(v)
-        #
-        # for v1 in vertexes:
-        #     for v2 in vertexes:
-        #         if v1 == v2:
-        #             continue
-        #
-        #         line = LineString([v1.point, v2.point])
-        #         append = True
-        #         for polygon in self.cspace[theta]:
-        #             intersect = line.crosses(polygon) or line.within(polygon)
-        #             # print(polygon)
-        #             # print(line)
-        #             # print(intersect)
-        #             # plt.plot(*polygon.exterior.coords.xy)
-        #             # plt.plot(*line.coords.xy)
-        #             # plt.show()
-        #
-        #             if intersect:
-        #                 append = False
-        #                 break
-        #
-        #         if append:
-        #             #self.graph.add_edge(v1, v2)
-        #             self.graph[theta].append(line)
-
-
-    def shortest_path(self, destination):
-        xd, yd = destination
-        checkpoints = [(xd, yd, 0), (8721, 900, 0), (0)]
-
-        return checkpoints
+        return path
 
     def path_planner(self, destination):
-        xd, yd = destination
+        vdest = Vertex(*destination)
+        vstart = Vertex(self.position[0]['x'], self.position[0]['y'])
 
-        checkpoints = self.shortest_path(destination)
+        print(vstart, "->" ,vdest)
+
+        self.update_sight_graph(vstart, vdest)
+
+        path = self.shortest_path(vstart, vdest)
+
+        checkpoints = []
+        for p in path:
+            checkpoints.append((p.x, p.y))
 
         return checkpoints
-
-
-    # def generate_graph(self,screen):
-    #     """
-    #     Generate a graph, connecting all vertexes which can be
-    #     reachted directly.
-    #     """
-    #
-    #     for polygon in self.polygons:
-    #         # add polygon edges to graph
-    #         for edge in polygon.edges:
-    #             self.graph.append(edge)
-    #
-    #         # find edges between polygons
-    #         for vertex in polygon.vertexes:
-    #             for polygon_search in self.polygons:
-    #                 if polygon_search == polygon:
-    #                     # no edges within a polygon
-    #                     continue
-    #
-    #                 for vertex_search in polygon_search.vertexes:
-    #                     line = Edge(vertex, vertex_search)
-    #
-    #                     print("====> check nex line in graph: ", line)
-    #
-    #                     # check weather line intersects with any polygon edge
-    #
-    #                     for polygon_intersect in self.polygons:
-    #                         print("Check polygon intersection:")
-    #                         append = True
-    #                         for edge in polygon_intersect.edges:
-    #                             #print("CHECK EDGE", edge)
-    #
-    #                             # result=True -> intersection found
-    #                             intersect = line.check_intersect(edge)
-    #                             yield line, edge, intersect
-    #
-    #                             if intersect:
-    #                                 break
-    #
-    #                         if intersect:
-    #                             print("found intersection")
-    #                             append = False
-    #                             break
-    #
-    #
-    #
-    #                     if append:
-    #                         self.graph.append(line)
-    #
-    #                         #if polygon_intersect.check_intersect(line):
-    #                         #    print("interrupt ")
-    #                         #    intersect = True
-    #                         #    break
-    #
-    #                     #if intersect:
-    #                     #    #graph.append(line)
-    #                     #    yield(line, False)
-    #                     #else:
-    #                     #    yield(line, True
-
-
-    # def set_width(self, width, margin=100):
-    #     """
-    #     Transform dxf coordinates to pygame coordinates.
-    #     """
-    #
-    #     #print(self.polygons[0].vertexes)
-    #     #all_vertexes = reduce(lambda p1,p2: p1.vertexes + p2.vertexes, self.polygons)
-    #     for polygon in self.polygons:
-    #         for i, vertex in enumerate(polygon.vertexes):
-    #             x, y = vertex
-    #             polygon.vertexes[i] = (x,-1*y)
-    #
-    #     for polygon in self.polygons:
-    #         for i, edge in enumerate(polygon.edges):
-    #             x,y = edge.start
-    #             polygon.edges[i].start = (x,-1*y)
-    #             x,y = edge.end
-    #             polygon.edges[i].end = (x,-1*y)
-    #
-    #     all_vertexes = []
-    #     for polygon in self.polygons:
-    #         all_vertexes += polygon.vertexes
-    #
-    #     all_x, all_y = zip(*all_vertexes)
-    #
-    #     #all_y = list(filter(lambda x:x*-1, all_y))
-    #     #print("ALL Y ",all_y)
-    #
-    #     xmin = min(all_x)-margin;
-    #     xmax = max(all_x)+margin;
-    #     ymin = min(all_y)-margin;
-    #     ymax = max(all_y)+margin
-    #
-    #     self.scale = width/(xmax-xmin)
-    #     self.xoffset = xmin
-    #
-    #     height = (ymax-ymin)*self.scale
-    #
-    #     #print("height", height)
-    #     #yscale = height/(ymax-ymin)
-    #     self.yoffset = ymin
-    #
-    #     print("BOUNARIES", xmin, xmax, ymin, ymax)
-    #
-    #     return width, height
-    #
-    # def scale_xy(self, x, y):
-    #     x -= self.xoffset
-    #     x *= self.scale
-    #     y -= self.yoffset
-    #     y *= self.scale
-    #
-    #     return x,y

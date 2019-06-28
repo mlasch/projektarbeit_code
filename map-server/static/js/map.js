@@ -199,16 +199,27 @@ async function mouseActionLeft(xp, yp) {
 
   cp.update(xp, yp);
 
-  // const response = await fetch('/plan', {
-  //   method: 'POST',
-  //   headers: {
-  //     'Content-Type': 'application/json'
-  //   },
-  //   body: JSON.stringify({'x': xw, 'y': yw})
-  // });
-  // const checkpoints = await response.json();
+  const response = await fetch('/plan', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({'x': xw, 'y': yw})
+  });
+  const resp = await response.json();
+  // console.log(resp['checkpoints']);
 
-  // console.log(checkpoints);
+  cp_list = new Array();
+
+  resp['checkpoints'].forEach((elem) => {
+    [xwc,ywc] = elem;
+    [xpc, ypc] = mp.world_to_pixel(xwc, ywc);
+
+    cp_list.push(new Checkpoint(xpc, ypc));
+    console.log(xpc,ypc);
+  });
+
+
 }
 
 async function mouseActionRight(xp, yp) {

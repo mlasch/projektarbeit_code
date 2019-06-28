@@ -64,11 +64,11 @@ def get_floorplan():
 
 @app.route('/plan', methods=['POST'])
 def path_planner():
-    print("POST:", request.json)
 
-    floorplan.path_planner((request.json['x'], request.json['y']))
+    checkpoints = floorplan.path_planner((request.json['x'], request.json['y']))
 
-    return jsonify({'checkpoints': []})
+    print(checkpoints)
+    return jsonify({'checkpoints': checkpoints})
 
 @app.route('/checkpoints', methods=['POST'])
 def checkpoints_handler():
