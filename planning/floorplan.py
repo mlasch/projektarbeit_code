@@ -12,6 +12,7 @@ from time import time
 
 from planning.shapes import Point, PlanPolygon, LineString
 from shapely.ops import polygonize_full, unary_union
+from shapely.strtree import STRtree
 import networkx as nx
 from networkx import astar_path
 from networkx.exception import NodeNotFound, NetworkXError
@@ -98,7 +99,7 @@ class Floorplan(object):
         self.bobstacles = []
 
         for obstacle in self.obstacles:
-            self.bobstacles.append(obstacle.buffer(robot_radius/2).simplify(20))
+            self.bobstacles.append(obstacle.buffer(robot_radius*0.9).simplify(30))
             #self.bobstacles.append(obstacle)
 
         ###### DEBUG
@@ -111,6 +112,9 @@ class Floorplan(object):
         # preload graph
         print("Start preloading graph")
         tstart = time()
+
+        self.tree_bobstacles = STRtree(self.bobstacles)
+
         self.graph = nx.Graph()
         print("{} {}".format(len(self.graph.nodes()), len(self.graph.edges())))
         for obstacle1 in self.bobstacles:
@@ -128,7 +132,7 @@ class Floorplan(object):
                         # if line.within(union_bobstacles) or line.crosses(union_bobstacles):
                         #     is_sightline = False
 
-                        for obstacle3 in self.bobstacles:
+                        for obstacle3 in self.tree_bobstacles.query(line):
                             if line.within(obstacle3) or line.crosses(obstacle3):
                                 is_sightline = False
 
@@ -158,7 +162,7 @@ class Floorplan(object):
                     #union_bobstacles = unary_union(self.bobstacles)
                     #print("union:", time()-tstart1)
 
-                    for obstacle3 in self.bobstacles:
+                    for obstacle3 in self.tree_bobstacles.query(line):
                         if line.within(obstacle3) or line.crosses(obstacle3):
                             is_sightline = False
 
