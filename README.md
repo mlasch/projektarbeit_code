@@ -1,6 +1,6 @@
-# Path Planning
+# Wegeplanung für ein autonomes indoor Personenbeförderungssystem
 
-This repository contains examples to explore different ideas to implement 2D path planning.
+Dieses Repository wurde im Rahmen einer Master Projektarbeit an der Hochschule Karlsruhe angefertigt. 
 
 ## Install dependencies
 
