@@ -1,6 +1,6 @@
 # Wegeplanung für ein autonomes indoor Personenbeförderungssystem
 
-Dieses Repository wurde im Rahmen einer Master Projektarbeit an der Hochschule Karlsruhe angefertigt. 
+Dieses Repository wurde im Rahmen einer Master Projektarbeit an der Hochschule Karlsruhe angefertigt.
 
 ## Install dependencies
 
@@ -56,3 +56,21 @@ $ docker run -p 1883:1883 -t mqtt-broker
 List the installed Docker images with `docker image ls` or `docker system df` in either case sometimes it's necessary to reset the environment: `docker system prune`  
 
 Tagging the Docker image after building: `docker tag 3b6b527f221b mqtt-broker`
+
+## Setup Wi-Fi
+
+### Flash OpenWRT on Netgear r6220
+
+Copy files `openwrt-18.06.4-ramips-mt7621-r6220-squashfs-rootfs.bin` and
+`openwrt-18.06.4-ramips-mt7621-r6220-squashfs-kernel.bin` on a vfat formated USB flash drive.
+
+ * telnet into the router 192.168.1.1 and login with admin
+ * `ls /mnt/shares/`
+ * `cd /mnt/shares/U/`
+ * backup flash layout
+  * `cat /proc/mtd > r6220.mtd.layout`
+  * `cat /dev/mtd10ro > r6220.mtd10ro.factory.bin`
+ * write rootfs: `mtd_write write rootfs.bin Rootfs`
+ * write kernel image: `mtd_write write kernel.bin Kernel`
+ * `reboot`
+ * open OpenWRT admin panel at 192.168.1.1
