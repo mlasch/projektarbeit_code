@@ -2,7 +2,7 @@ Click==7.0
 cycler==0.10.0
 decorator==4.4.0
 dnspython==1.16.0
-eventlet==0.24.1
+eventlet==0.31.0
 ezdxf==0.9
 Flask==1.0.2
 Flask-MQTT==1.0.5
