@@ -23,7 +23,7 @@ pkg-resources==0.0.0
 pygame==1.9.6
 pyparsing==2.4.0
 python-dateutil==2.8.0
-python-engineio==3.5.1
+python-engineio==3.8.2.post1
 python-socketio==3.1.2
 Shapely==1.6.4.post2
 six==1.12.0
