@@ -4,7 +4,7 @@ decorator==4.4.0
 dnspython==1.16.0
 eventlet==0.24.1
 ezdxf==0.9
-Flask==1.0.2
+Flask==2.3.2
 Flask-MQTT==1.0.5
 Flask-SocketIO==3.3.2
 gevent==1.4.0
